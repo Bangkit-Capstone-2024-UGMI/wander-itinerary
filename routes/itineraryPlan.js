@@ -1,12 +1,22 @@
 const express = require('express');
 const router = express.Router();
 
+const formatDate = (timestamp) => {
+  const date = new Date(timestamp._seconds * 1000 + timestamp._nanoseconds / 1000000);
+  return date.toISOString().split('T')[0]; 
+};
+
+const formatVisitTime = (timestamp) => {
+  const date = new Date(timestamp._seconds * 1000 + timestamp._nanoseconds / 1000000);
+  return date.toISOString();
+};
+
 router.post('/', async (req, res) => {
     try {
       const { userId, title, startDate, endDate, city, destinations } = req.body;
       const db = req.db;
   
-      if (!userId || !title || !startDate || !endDate || !city || !destinations) {
+      if (!userId || !title || !startDate || !city || !destinations) {
         console.error('Missing required fields');
         return res.status(400).send('Missing required fields');
       }
@@ -115,38 +125,67 @@ router.put('/:id', async (req, res) => {
 });
 
 router.get('/', async (req, res) => {
-    try {
+  try {
       const db = req.db;
       const snapshot = await db.collection('ItineraryPlans').get();
-  
+
       if (snapshot.empty) {
-        return res.status(404).send('No itinerary found');
+          return res.status(404).send('No itinerary found');
       }
-  
-      const itineraryPlans = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      const itineraryPlans = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+              id: doc.id,
+              userId: data.userId,
+              title: data.title,
+              startDate: formatDate(data.startDate),
+              endDate: formatDate(data.endDate),
+              city: data.city,
+              destinations: data.destinations.map(destination => ({
+                  name: destination.name,
+                  visitTime: formatVisitTime(destination.visitTime),
+                  location: destination.location
+              }))
+          };
+      });
       res.status(200).send(itineraryPlans);
-    } catch (error) {
+  } catch (error) {
       console.error(error);
       res.status(500).send('Internal Server Error');
-    }
+  }
 });
 
 router.get('/:id', async (req, res) => {
-    try {
+  try {
       const { id } = req.params;
       const db = req.db;
       const itineraryPlanRef = db.collection('ItineraryPlans').doc(id);
       const itineraryPlanDoc = await itineraryPlanRef.get();
-  
+
       if (!itineraryPlanDoc.exists) {
-        return res.status(404).send('Itinerary not found');
+          return res.status(404).send('Itinerary not found');
       }
-  
-      res.status(200).send({ id: itineraryPlanDoc.id, ...itineraryPlanDoc.data() });
-    } catch (error) {
+
+      const data = itineraryPlanDoc.data();
+      const formattedData = {
+          id: itineraryPlanDoc.id,
+          userId: data.userId,
+          title: data.title,
+          startDate: formatDate(data.startDate),
+          endDate: formatDate(data.endDate),
+          city: data.city,
+          destinations: data.destinations.map(destination => ({
+              name: destination.name,
+              visitTime: formatVisitTime(destination.visitTime),
+              location: destination.location
+          }))
+      };
+      res.status(200).send(formattedData);
+  } catch (error) {
       console.error(error);
       res.status(500).send('Internal Server Error');
-    }
+  }
 });
 
 router.delete('/:id', async (req, res) => {

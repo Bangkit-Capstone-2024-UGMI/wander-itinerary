@@ -1,7 +1,8 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const admin = require('firebase-admin');
-const itineraryRouter = require('./routes/itineraryPlan.js');
+const itineraryRouter = require('./routes/itineraryPlan');
+const usersRouter = require('./routes/users'); 
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -14,11 +15,15 @@ admin.initializeApp({
 const db = admin.firestore();
 
 app.use(bodyParser.json());
-app.use('/api/itineraryPlan', (req, res, next) => {
+
+app.use((req, res, next) => {
   req.db = db;
   next();
-}, itineraryRouter);
+});
+
+app.use('/api/itineraryPlan', itineraryRouter);
+app.use('/api/users', usersRouter);
 
 app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
+  console.log(`Server running on port ${port}`);
 });

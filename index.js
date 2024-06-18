@@ -41,6 +41,9 @@ const options = {
     servers: [
       {
         url: "http://localhost:3000"
+      },
+      {
+        url: "https://wander-itinerary-vjn7sf67na-et.a.run.app/"
       }
     ]
   },

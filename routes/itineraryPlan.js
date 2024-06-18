@@ -1,10 +1,12 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const admin = require('firebase-admin');
+const admin = require("firebase-admin");
 
 const formatDate = (timestamp) => {
-  const date = new Date(timestamp._seconds * 1000 + timestamp._nanoseconds / 1000000);
-  return date.toISOString().split('T')[0];
+  const date = new Date(
+    timestamp._seconds * 1000 + timestamp._nanoseconds / 1000000
+  );
+  return date.toISOString().split("T")[0];
 };
 
 /**
@@ -12,7 +14,7 @@ const formatDate = (timestamp) => {
  * tags:
  *   name: ItineraryPlans
  *   description: Operations related to itinerary plans
-*/
+ */
 
 /**
  * @swagger
@@ -59,7 +61,7 @@ const formatDate = (timestamp) => {
  *               type: number
  *               format: float
  *               description: The longitude of the destination
-*/
+ */
 
 /**
  * @swagger
@@ -109,35 +111,35 @@ const formatDate = (timestamp) => {
  *         description: Missing required fields
  *       500:
  *         description: Internal Server Error
-*/
+ */
 
-router.post('/', async (req, res) => {
-    try {
-      const { title, startDate, city, destinations } = req.body;
-      const userId = req.user.uid; 
-      const db = req.db;
+router.post("/", async (req, res) => {
+  try {
+    const { title, startDate, city, destinations } = req.body;
+    const userId = req.user.uid;
+    const db = req.db;
 
-      if (!title || !startDate || !city || !destinations) {
-        console.error('Missing required fields');
-        return res.status(400).send('Missing required fields');
-      }
-
-      const startDatePlan = new Date(startDate);
-
-      const itineraryPlan = {
-        userId,
-        title,
-        startDate: startDatePlan,
-        city,
-        destinations
-      };
-
-      const docRef = await db.collection('ItineraryPlans').add(itineraryPlan);
-      res.status(201).send({ id: docRef.id });
-    } catch (error) {
-      console.error('Error creating itinerary:', error.message);
-      res.status(500).send('Internal Server Error');
+    if (!title || !startDate || !city || !destinations) {
+      console.error("Missing required fields");
+      return res.status(400).send("Missing required fields");
     }
+
+    const startDatePlan = new Date(startDate);
+
+    const itineraryPlan = {
+      userId,
+      title,
+      startDate: startDatePlan,
+      city,
+      destinations,
+    };
+
+    const docRef = await db.collection("ItineraryPlans").add(itineraryPlan);
+    res.status(201).send({ id: docRef.id });
+  } catch (error) {
+    console.error("Error creating itinerary:", error.message);
+    res.status(500).send("Internal Server Error", error.message);
+  }
 });
 
 /**
@@ -189,38 +191,43 @@ router.post('/', async (req, res) => {
  *         description: Itinerary not found
  *       500:
  *         description: Internal Server Error
-*/
+ */
 
-router.put('/:id', async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { title, startDate, city, destinations } = req.body;
-      const db = req.db;
+router.put("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, startDate, city, destinations } = req.body;
+    const db = req.db;
 
-      const itineraryPlanRef = db.collection('ItineraryPlans').doc(id);
-      const itineraryPlanDoc = await itineraryPlanRef.get();
+    const itineraryPlanRef = db.collection("ItineraryPlans").doc(id);
+    const itineraryPlanDoc = await itineraryPlanRef.get();
 
-      if (!itineraryPlanDoc.exists) {
-        return res.status(404).send('Itinerary not found');
-      }
-
-      const currentItinerary = itineraryPlanDoc.data();
-      const newStartDate = startDate ? new Date(startDate) : currentItinerary.startDate.toDate();
-
-      const updatedItineraryPlan = {
-        userId: req.user.uid,
-        title: title || currentItinerary.title,
-        startDate: newStartDate,
-        city: city || currentItinerary.city,
-        destinations: destinations !== undefined ? destinations : currentItinerary.destinations
-      };
-
-      await itineraryPlanRef.update(updatedItineraryPlan);
-      res.status(200).send('Itinerary updated successfully');
-    } catch (error) {
-      console.error(error);
-      res.status(500).send('Internal Server Error');
+    if (!itineraryPlanDoc.exists) {
+      return res.status(404).send("Itinerary not found");
     }
+
+    const currentItinerary = itineraryPlanDoc.data();
+    const newStartDate = startDate
+      ? new Date(startDate)
+      : currentItinerary.startDate.toDate();
+
+    const updatedItineraryPlan = {
+      userId: req.user.uid,
+      title: title || currentItinerary.title,
+      startDate: newStartDate,
+      city: city || currentItinerary.city,
+      destinations:
+        destinations !== undefined
+          ? destinations
+          : currentItinerary.destinations,
+    };
+
+    await itineraryPlanRef.update(updatedItineraryPlan);
+    res.status(200).send("Itinerary updated successfully");
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Internal Server Error");
+  }
 });
 
 /**
@@ -242,32 +249,35 @@ router.put('/:id', async (req, res) => {
  *         description: No itinerary found
  *       500:
  *         description: Internal Server Error
-*/
+ */
 
-router.get('/', async (req, res) => {
+router.get("/", async (req, res) => {
   try {
-      const db = req.db;
-      const snapshot = await db.collection('ItineraryPlans').where('userId', '==', req.user.uid).get();
+    const db = req.db;
+    const snapshot = await db
+      .collection("ItineraryPlans")
+      .where("userId", "==", req.user.uid)
+      .get();
 
-      if (snapshot.empty) {
-          return res.status(404).send('No itinerary found');
-      }
+    if (snapshot.empty) {
+      return res.status(404).send("No itinerary found");
+    }
 
-      const itineraryPlans = snapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-              id: doc.id,
-              userId: data.userId,
-              title: data.title,
-              startDate: formatDate(data.startDate),
-              city: data.city,
-              destinations: data.destinations
-          };
-      });
-      res.status(200).send(itineraryPlans);
+    const itineraryPlans = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        userId: data.userId,
+        title: data.title,
+        startDate: formatDate(data.startDate),
+        city: data.city,
+        destinations: data.destinations,
+      };
+    });
+    res.status(200).send(itineraryPlans);
   } catch (error) {
-      console.error(error);
-      res.status(500).send('Internal Server Error');
+    console.error(error);
+    res.status(500).send("Internal Server Error");
   }
 });
 
@@ -297,35 +307,35 @@ router.get('/', async (req, res) => {
  *         description: Itinerary not found
  *       500:
  *         description: Internal Server Error
-*/
+ */
 
-router.get('/:id', async (req, res) => {
+router.get("/:id", async (req, res) => {
   try {
-      const { id } = req.params;
-      const db = req.db;
-      const itineraryPlanRef = db.collection('ItineraryPlans').doc(id);
-      const itineraryPlanDoc = await itineraryPlanRef.get();
+    const { id } = req.params;
+    const db = req.db;
+    const itineraryPlanRef = db.collection("ItineraryPlans").doc(id);
+    const itineraryPlanDoc = await itineraryPlanRef.get();
 
-      if (!itineraryPlanDoc.exists) {
-          return res.status(404).send('Itinerary not found');
-      }
+    if (!itineraryPlanDoc.exists) {
+      return res.status(404).send("Itinerary not found");
+    }
 
-      const data = itineraryPlanDoc.data();
-      if (data.userId !== req.user.uid) {
-        return res.status(403).send('Forbidden');
-      }
-      const formattedData = {
-          id: itineraryPlanDoc.id,
-          userId: data.userId,
-          title: data.title,
-          startDate: formatDate(data.startDate),
-          city: data.city,
-          destinations: data.destinations
-      };
-      res.status(200).send(formattedData);
+    const data = itineraryPlanDoc.data();
+    if (data.userId !== req.user.uid) {
+      return res.status(403).send("Forbidden");
+    }
+    const formattedData = {
+      id: itineraryPlanDoc.id,
+      userId: data.userId,
+      title: data.title,
+      startDate: formatDate(data.startDate),
+      city: data.city,
+      destinations: data.destinations,
+    };
+    res.status(200).send(formattedData);
   } catch (error) {
-      console.error(error);
-      res.status(500).send('Internal Server Error');
+    console.error(error);
+    res.status(500).send("Internal Server Error");
   }
 });
 
@@ -349,25 +359,25 @@ router.get('/:id', async (req, res) => {
  *         description: Itinerary not found
  *       500:
  *         description: Internal Server Error
-*/
+ */
 
-router.delete('/:id', async (req, res) => {
-    try {
-      const { id } = req.params;
-      const db = req.db;
-      const itineraryPlanRef = db.collection('ItineraryPlans').doc(id);
+router.delete("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const db = req.db;
+    const itineraryPlanRef = db.collection("ItineraryPlans").doc(id);
 
-      const itineraryPlanDoc = await itineraryPlanRef.get();
-      if (!itineraryPlanDoc.exists) {
-        return res.status(404).send('Itinerary not found');
-      }
-
-      await itineraryPlanRef.delete();
-      res.status(200).send('Itinerary deleted successfully');
-    } catch (error) {
-      console.error(error);
-      res.status(500).send('Internal Server Error');
+    const itineraryPlanDoc = await itineraryPlanRef.get();
+    if (!itineraryPlanDoc.exists) {
+      return res.status(404).send("Itinerary not found");
     }
+
+    await itineraryPlanRef.delete();
+    res.status(200).send("Itinerary deleted successfully");
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Internal Server Error");
+  }
 });
 
 module.exports = router;

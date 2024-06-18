@@ -102,83 +102,112 @@ const destinationCategories = [
 ];
 
 const validateUserData = (req, res, next) => {
-  const { name, gender, birthDate, destinationPreferences } = req.body;
-
-  if (name && !/^[A-Za-z\s]+$/.test(name)) {
-    return res.status(400).send('Name can not contain numbers or symbols');
-  }
-
-  if (gender && !['Male', 'Female', 'Other'].includes(gender)) {
-    return res.status(400).send('Invalid input! Please choose Male, Female, or Other');
-  }
-
-  if (birthDate) {
-    const birthDateObj = new Date(birthDate);
-    const currentDate = new Date();
-    if (isNaN(birthDateObj.getTime()) || birthDateObj > currentDate) {
-      return res.status(400).send('Birth date must be a valid date and cannot be in the future');
-    }
-  }
-
-  if (destinationPreferences) {
-    if (!Array.isArray(destinationPreferences)) {
-        return res.status(400).send('Invalid destination preferences format');
-    }
-
-    const validPreferences = destinationPreferences.every(pref => destinationCategories.includes(pref));
-
-    if (!validPreferences) {
-      return res.status(400).send('Invalid destination preferences categories');
-    }
-  }
-
-  next();
-};
-
-// const authenticateToken = async (req, res, next) => {
-//   const idToken = req.headers.authorization?.split('Bearer ')[1];
-  
-//   if (!idToken) {
-//     return res.status(401).send('Unauthorized');
-//   }
-  
-//   try {
-//     const decodedToken = await admin.auth().verifyIdToken(idToken);
-//     req.user = decodedToken;
-//     next();
-//   } catch (error) {
-//     console.error('Error verifying ID token:', error);
-//     res.status(401).send('Unauthorized');
-//   }
-// };
-
-const dummyUserId = 'testUserId';
-
-router.post('/', validateUserData, async (req, res) => {
-  try {
     const { name, gender, birthDate, destinationPreferences } = req.body;
-    const userId = dummyUserId; 
-    const db = req.db;
-    
-    const userRef = db.collection('users').doc(userId);
-    await userRef.set({
-      name,
-      gender,
-      birthDate,
-      destinationPreferences: destinationPreferences || [],
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-
-    res.status(200).send('User profile created successfully');
-  } catch (error) {
-    console.error('Error creating user profile:', error);
-    res.status(500).send('Internal Server Error');
-  }
-});
-
-router.get('/:id', async (req, res) => {
+  
+    if (name && !/^[A-Za-z\s]+$/.test(name)) {
+      return res.status(400).send('Name can not contain numbers or symbols');
+    }
+  
+    if (gender && !['Male', 'Female', 'Other'].includes(gender)) {
+      return res.status(400).send('Invalid input! Please choose Male, Female, or Other');
+    }
+  
+    if (birthDate) {
+      const birthDateObj = new Date(birthDate);
+      const currentDate = new Date();
+      if (isNaN(birthDateObj.getTime()) || birthDateObj > currentDate) {
+        return res.status(400).send('Birth date must be a valid date and cannot be in the future');
+      }
+    }
+  
+    if (destinationPreferences) {
+      if (!Array.isArray(destinationPreferences)) {
+          return res.status(400).send('Invalid destination preferences format');
+      }
+  
+      const validPreferences = destinationPreferences.every(pref => destinationCategories.includes(pref));
+  
+      if (!validPreferences) {
+        return res.status(400).send('Invalid destination preferences categories');
+      }
+    }
+  
+    next();
+};
+  
+router.post('/', validateUserData, async (req, res) => {
     try {
+      const { name, gender, birthDate, destinationPreferences } = req.body;
+      const userId = req.user.uid;
+      const db = req.db;
+      
+      const userRef = db.collection('users').doc(userId);
+      await userRef.set({
+        name,
+        gender,
+        birthDate,
+        destinationPreferences: destinationPreferences || [],
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+  
+      res.status(200).send('User profile created successfully');
+    } catch (error) {
+      console.error('Error creating user profile:', error);
+      res.status(500).send('Internal Server Error');
+    }
+});
+  
+router.get('/:id', async (req, res) => {
+      try {
+          const { id } = req.params;
+          const db = req.db;
+      
+          const userRef = db.collection('users').doc(id);
+          const userDoc = await userRef.get();
+      
+          if (!userDoc.exists) {
+            return res.status(404).send('User not found');
+          }
+      
+          res.status(200).send({ id: userDoc.id, ...userDoc.data() });
+        } catch (error) {
+          console.error('Error fetching user profile:', error);
+          res.status(500).send('Internal Server Error');
+        }
+});
+  
+router.put('/:id', validateUserData, async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { name, gender, birthDate, destinationPreferences } = req.body;
+        const db = req.db;
+    
+        const userRef = db.collection('users').doc(id);
+        const userDoc = await userRef.get();
+    
+        if (!userDoc.exists) {
+          return res.status(404).send('User not found');
+        }
+    
+        const updatedUser = {
+          name,
+          gender,
+          birthDate: new Date(birthDate),
+          destinationPreferences: destinationPreferences !== undefined ? destinationPreferences : userDoc.data().destinationPreferences,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        };
+    
+        await userRef.update(updatedUser);
+        res.status(200).send('User profile updated successfully');
+      } catch (error) {
+        console.error('Error updating user profile:', error);
+        res.status(500).send('Internal Server Error');
+      }
+});
+  
+router.delete('/:id', async (req, res) => {
+      try {
         const { id } = req.params;
         const db = req.db;
     
@@ -189,60 +218,12 @@ router.get('/:id', async (req, res) => {
           return res.status(404).send('User not found');
         }
     
-        res.status(200).send({ id: userDoc.id, ...userDoc.data() });
+        await userRef.delete();
+        res.status(200).send('User profile deleted successfully');
       } catch (error) {
-        console.error('Error fetching user profile:', error);
+        console.error('Error deleting user profile:', error);
         res.status(500).send('Internal Server Error');
       }
-  });
-
-router.put('/:id', validateUserData, async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { name, gender, birthDate, destinationPreferences } = req.body;
-      const db = req.db;
+});
   
-      const userRef = db.collection('users').doc(id);
-      const userDoc = await userRef.get();
-  
-      if (!userDoc.exists) {
-        return res.status(404).send('User not found');
-      }
-  
-      const updatedUser = {
-        name,
-        gender,
-        birthDate: new Date(birthDate),
-        destinationPreferences: destinationPreferences !== undefined ? destinationPreferences : userDoc.data().destinationPreferences,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      };
-  
-      await userRef.update(updatedUser);
-      res.status(200).send('User profile updated successfully');
-    } catch (error) {
-      console.error('Error updating user profile:', error);
-      res.status(500).send('Internal Server Error');
-    }
-  });
-
-  router.delete('/:id', async (req, res) => {
-    try {
-      const { id } = req.params;
-      const db = req.db;
-  
-      const userRef = db.collection('users').doc(id);
-      const userDoc = await userRef.get();
-  
-      if (!userDoc.exists) {
-        return res.status(404).send('User not found');
-      }
-  
-      await userRef.delete();
-      res.status(200).send('User profile deleted successfully');
-    } catch (error) {
-      console.error('Error deleting user profile:', error);
-      res.status(500).send('Internal Server Error');
-    }
-  });
-
 module.exports = router;

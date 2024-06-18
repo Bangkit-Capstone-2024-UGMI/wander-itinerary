@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const admin = require('firebase-admin');
 
 const formatDate = (timestamp) => {
   const date = new Date(timestamp._seconds * 1000 + timestamp._nanoseconds / 1000000);
@@ -8,10 +9,11 @@ const formatDate = (timestamp) => {
 
 router.post('/', async (req, res) => {
     try {
-      const { userId, title, startDate, city, destinations } = req.body;
+      const { title, startDate, city, destinations } = req.body;
+      const userId = req.user.uid; 
       const db = req.db;
 
-      if (!userId || !title || !startDate || !city || !destinations) {
+      if (!title || !startDate || !city || !destinations) {
         console.error('Missing required fields');
         return res.status(400).send('Missing required fields');
       }
@@ -37,7 +39,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
     try {
       const { id } = req.params;
-      const { userId, title, startDate, city, destinations } = req.body;
+      const { title, startDate, city, destinations } = req.body;
       const db = req.db;
 
       const itineraryPlanRef = db.collection('ItineraryPlans').doc(id);
@@ -51,7 +53,7 @@ router.put('/:id', async (req, res) => {
       const newStartDate = startDate ? new Date(startDate) : currentItinerary.startDate.toDate();
 
       const updatedItineraryPlan = {
-        userId: userId !== undefined ? userId : currentItinerary.userId,
+        userId: req.user.uid,
         title: title || currentItinerary.title,
         startDate: newStartDate,
         city: city || currentItinerary.city,
@@ -69,7 +71,7 @@ router.put('/:id', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
       const db = req.db;
-      const snapshot = await db.collection('ItineraryPlans').get();
+      const snapshot = await db.collection('ItineraryPlans').where('userId', '==', req.user.uid).get();
 
       if (snapshot.empty) {
           return res.status(404).send('No itinerary found');
@@ -105,6 +107,9 @@ router.get('/:id', async (req, res) => {
       }
 
       const data = itineraryPlanDoc.data();
+      if (data.userId !== req.user.uid) {
+        return res.status(403).send('Forbidden');
+      }
       const formattedData = {
           id: itineraryPlanDoc.id,
           userId: data.userId,

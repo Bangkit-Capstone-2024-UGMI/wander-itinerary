@@ -2,7 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const admin = require('firebase-admin');
 const itineraryRouter = require('./routes/itineraryPlan');
-const usersRouter = require('./routes/users'); 
+const usersRouter = require('./routes/users');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -21,8 +21,25 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use('/api/itineraryPlan', itineraryRouter);
-app.use('/api/users', usersRouter);
+const authenticateToken = async (req, res, next) => {
+  const idToken = req.headers.authorization?.split('Bearer ')[1];
+  
+  if (!idToken) {
+    return res.status(401).send('Unauthorized');
+  }
+  
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    req.user = decodedToken;
+    next();
+  } catch (error) {
+    console.error('Error verifying ID token:', error);
+    res.status(401).send('Unauthorized');
+  }
+};
+
+app.use('/api/itineraryPlan', authenticateToken, itineraryRouter);
+app.use('/api/users', authenticateToken, usersRouter);
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);

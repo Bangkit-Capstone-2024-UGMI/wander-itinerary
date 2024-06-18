@@ -1,6 +1,8 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const admin = require('firebase-admin');
+const swaggerUI = require("swagger-ui-express");
+const swaggerJsDoc = require("swagger-jsdoc");
 const itineraryRouter = require('./routes/itineraryPlan');
 const usersRouter = require('./routes/users');
 require('dotenv').config();
@@ -26,6 +28,27 @@ admin.initializeApp({
 });
 
 const db = admin.firestore();
+
+const options = {
+  definition: {
+    openapi: "3.0.0",
+    info: {
+      title: "Wander API",
+      version: "1.0.0",
+      description: "API to handle the backend of itinerary plan feature of the Wander App"
+    },
+    servers: [
+      {
+        url: "http://localhost:3000"
+      }
+    ]
+  },
+  apis: ["./routes/*.js"]
+}
+
+const specs = swaggerJsDoc(options);
+
+app.use("/api-docs", swaggerUI.serve, swaggerUI.setup(specs));
 
 app.use(bodyParser.json());
 

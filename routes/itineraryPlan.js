@@ -7,6 +7,110 @@ const formatDate = (timestamp) => {
   return date.toISOString().split('T')[0];
 };
 
+/**
+ * @swagger
+ * tags:
+ *   name: ItineraryPlans
+ *   description: Operations related to itinerary plans
+*/
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     ItineraryPlan:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           description: The itinerary plan ID
+ *         userId:
+ *           type: string
+ *           description: The user ID
+ *         title:
+ *           type: string
+ *           description: The title of the itinerary plan
+ *         startDate:
+ *           type: string
+ *           format: date
+ *           description: The start date of the itinerary plan
+ *         city:
+ *           type: string
+ *           description: The city of the itinerary plan
+ *         destinations:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/Destination'
+ *           description: The list of destinations in the itinerary plan
+ *     Destination:
+ *       type: object
+ *       properties:
+ *         name:
+ *           type: string
+ *           description: The name of the destination
+ *         location:
+ *           type: object
+ *           properties:
+ *             latitude:
+ *               type: number
+ *               format: float
+ *               description: The latitude of the destination
+ *             longitude:
+ *               type: number
+ *               format: float
+ *               description: The longitude of the destination
+*/
+
+/**
+ * @swagger
+ * /api/itineraryPlan:
+ *   post:
+ *     summary: Create a new itinerary plan
+ *     tags: [ItineraryPlans]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               startDate:
+ *                 type: string
+ *                 format: date
+ *               city:
+ *                 type: string
+ *               destinations:
+ *                 type: array
+ *                 items:
+ *                   $ref: '#/components/schemas/Destination'
+ *             example:
+ *               title: Yogyakarta New Trip
+ *               startDate: 2024-08-01
+ *               city: Sleman
+ *               destinations:
+ *                 - name: FMIPA UGM
+ *                   location: { latitude: -7.637478622592584, longitude: 110.60331078543685 }
+ *                 - name: Obie Cafe & Space
+ *                   location: { latitude: -7.75637133211122, longitude: 110.37487495154251 }
+ *     responses:
+ *       201:
+ *         description: Itinerary plan created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                   description: The ID of the created itinerary plan
+ *       400:
+ *         description: Missing required fields
+ *       500:
+ *         description: Internal Server Error
+*/
+
 router.post('/', async (req, res) => {
     try {
       const { title, startDate, city, destinations } = req.body;
@@ -35,6 +139,57 @@ router.post('/', async (req, res) => {
       res.status(500).send('Internal Server Error');
     }
 });
+
+/**
+ * @swagger
+ * /api/itineraryPlan/{id}:
+ *   put:
+ *     summary: Update an existing itinerary plan by ID
+ *     tags: [ItineraryPlans]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The itinerary plan ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               startDate:
+ *                 type: string
+ *                 format: date
+ *               city:
+ *                 type: string
+ *               destinations:
+ *                 type: array
+ *                 items:
+ *                   $ref: '#/components/schemas/Destination'
+ *             example:
+ *               title: Yogyakarta New Trip
+ *               startDate: 2024-08-01
+ *               city: Sleman
+ *               destinations:
+ *                 - name: FMIPA UGM
+ *                   location: { latitude: -7.637478622592584, longitude: 110.60331078543685 }
+ *                 - name: Obie Cafe & Space
+ *                   location: { latitude: -7.75637133211122, longitude: 110.37487495154251 }
+ *     responses:
+ *       200:
+ *         description: Itinerary updated successfully
+ *       400:
+ *         description: Invalid request or missing fields
+ *       404:
+ *         description: Itinerary not found
+ *       500:
+ *         description: Internal Server Error
+*/
 
 router.put('/:id', async (req, res) => {
     try {
@@ -68,6 +223,27 @@ router.put('/:id', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/itineraryPlan:
+ *   get:
+ *     summary: Retrieve all itinerary plans for the authenticated user
+ *     tags: [ItineraryPlans]
+ *     responses:
+ *       200:
+ *         description: List of itinerary plans retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/ItineraryPlan'
+ *       404:
+ *         description: No itinerary found
+ *       500:
+ *         description: Internal Server Error
+*/
+
 router.get('/', async (req, res) => {
   try {
       const db = req.db;
@@ -94,6 +270,34 @@ router.get('/', async (req, res) => {
       res.status(500).send('Internal Server Error');
   }
 });
+
+/**
+ * @swagger
+ * /api/itineraryPlan/{id}:
+ *   get:
+ *     summary: Retrieve a specific itinerary plan by ID
+ *     tags: [ItineraryPlans]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The itinerary plan ID
+ *     responses:
+ *       200:
+ *         description: Itinerary plan retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ItineraryPlan'
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Itinerary not found
+ *       500:
+ *         description: Internal Server Error
+*/
 
 router.get('/:id', async (req, res) => {
   try {
@@ -124,6 +328,28 @@ router.get('/:id', async (req, res) => {
       res.status(500).send('Internal Server Error');
   }
 });
+
+/**
+ * @swagger
+ * /api/itineraryPlan/{id}:
+ *   delete:
+ *     summary: Delete an itinerary plan by ID
+ *     tags: [ItineraryPlans]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The itinerary plan ID
+ *     responses:
+ *       200:
+ *         description: Itinerary deleted successfully
+ *       404:
+ *         description: Itinerary not found
+ *       500:
+ *         description: Internal Server Error
+*/
 
 router.delete('/:id', async (req, res) => {
     try {

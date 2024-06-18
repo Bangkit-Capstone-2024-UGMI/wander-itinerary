@@ -10,7 +10,7 @@ steps:
   # Step 3: Deploy the container image to Cloud Run.
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'gcloud'
-    args: ['run', 'deploy', 'wander-itinerary', '--image', 'gcr.io/$PROJECT_ID/wander-itinerary', '--platform', 'managed', '--region', 'us-central1']
+    args: ['run', 'deploy', 'wander-itinerary', '--image', 'gcr.io/$PROJECT_ID/wander-itinerary', '--platform', 'managed', '--region', 'asia-southeast2']
 
 # Define the images to be pushed to Google Container Registry.
 images:

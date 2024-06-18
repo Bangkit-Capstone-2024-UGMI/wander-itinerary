@@ -138,7 +138,7 @@ router.post("/", async (req, res) => {
     res.status(201).send({ id: docRef.id });
   } catch (error) {
     console.error("Error creating itinerary:", error.message);
-    res.status(500).send("Internal Server Error", error.message);
+    res.status(500).send("Internal Server Error", error);
   }
 });
 

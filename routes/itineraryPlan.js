@@ -86,7 +86,7 @@ const formatDate = (timestamp) => {
  *                 items:
  *                   $ref: '#/components/schemas/Destination'
  *             example:
- *               title: Yogyakarta New Trip
+ *               title: Yogyakarta New Trip 2
  *               startDate: 2024-08-01
  *               city: Sleman
  *               destinations:

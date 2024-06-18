@@ -5,6 +5,7 @@ const swaggerUI = require("swagger-ui-express");
 const swaggerJsDoc = require("swagger-jsdoc");
 const itineraryRouter = require('./routes/itineraryPlan');
 const usersRouter = require('./routes/users');
+const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
@@ -49,6 +50,7 @@ const options = {
 const specs = swaggerJsDoc(options);
 
 app.use("/api-docs", swaggerUI.serve, swaggerUI.setup(specs));
+app.use(cors());
 
 app.use(bodyParser.json());
 

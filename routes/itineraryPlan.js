@@ -129,7 +129,8 @@ router.post('/', async (req, res) => {
         title,
         startDate: startDatePlan,
         city,
-        destinations
+        destinations,
+        selectedHotel: {}
       };
 
       const docRef = await db.collection('ItineraryPlans').add(itineraryPlan);
@@ -320,7 +321,8 @@ router.get('/:id', async (req, res) => {
           title: data.title,
           startDate: formatDate(data.startDate),
           city: data.city,
-          destinations: data.destinations
+          destinations: data.destinations,
+          selectedHotel: data.selectedHotel || null
       };
       res.status(200).send(formattedData);
   } catch (error) {
@@ -368,6 +370,156 @@ router.delete('/:id', async (req, res) => {
       console.error(error);
       res.status(500).send('Internal Server Error');
     }
+});
+
+/**
+ * @swagger
+ * /api/itineraryPlan/{id}/hotel:
+ *   post:
+ *     summary: Add a hotel to an itinerary plan
+ *     tags:
+ *       - SelectHotel
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the itinerary plan
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - formatted_address
+ *               - distance
+ *               - rating
+ *               - predicted_ranking_score
+ *               - place_id
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: "Wyndham Garden Yogyakarta"
+ *               formatted_address:
+ *                 type: string
+ *                 example: "Jl. Magelang No.KM 14, Jetis, Caturharjo, Kec. Sleman, Yogyakarta, Daerah Istimewa Yogyakarta 55515, Indonesia"
+ *               distance:
+ *                 type: number
+ *                 example: 1.0340159487
+ *               rating:
+ *                 type: number
+ *                 example: 4.9
+ *               predicted_ranking_score:
+ *                 type: number
+ *                 example: 1.7138060331
+ *               place_id:
+ *                 type: string
+ *                 example: "ChIJKboZ0W9fei4RVrwSr2b0ek8"
+ *     responses:
+ *       '200':
+ *         description: Hotel added successfully
+ *       '400':
+ *         description: Missing required hotel fields
+ *       '403':
+ *         description: Forbidden - User does not have permission to modify this itinerary
+ *       '404':
+ *         description: Itinerary not found
+ *       '500':
+ *         description: Internal Server Error
+*/
+
+
+router.post('/:id/hotel', async (req, res) => {
+  try {
+      const { id } = req.params;
+      const { name, formatted_address, distance, rating, predicted_ranking_score, place_id } = req.body;
+      const db = req.db;
+
+      if (!name || !formatted_address || !distance || !rating || !predicted_ranking_score || !place_id) {
+          return res.status(400).send('Missing required hotel fields');
+      }
+
+      const itineraryPlanRef = db.collection('ItineraryPlans').doc(id);
+      const itineraryPlanDoc = await itineraryPlanRef.get();
+
+      if (!itineraryPlanDoc.exists) {
+          return res.status(404).send('Itinerary not found');
+      }
+
+      const currentItinerary = itineraryPlanDoc.data();
+      if (currentItinerary.userId !== req.user.uid) {
+          return res.status(403).send('Forbidden');
+      }
+
+      const selectedHotel = {
+          name,
+          formatted_address,
+          distance,
+          rating,
+          predicted_ranking_score,
+          place_id
+      };
+
+      await itineraryPlanRef.update({ selectedHotel });
+      res.status(200).send('Hotel added successfully');
+  } catch (error) {
+      console.error('Error adding hotel:', error.message);
+      res.status(500).send('Internal Server Error');
+  }
+});
+
+/**
+ * @swagger
+ * /api/itineraryPlan/{id}/hotel:
+ *   delete:
+ *     summary: Delete the selected hotel from an itinerary plan
+ *     tags:
+ *       - SelectHotel
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the itinerary plan
+ *     responses:
+ *       '200':
+ *         description: Hotel deleted successfully
+ *       '403':
+ *         description: Forbidden - User does not have permission to modify this itinerary
+ *       '404':
+ *         description: Itinerary not found
+ *       '500':
+ *         description: Internal Server Error
+*/
+
+
+router.delete('/:id/hotel', async (req, res) => {
+  try {
+      const { id } = req.params;
+      const db = req.db;
+
+      const itineraryPlanRef = db.collection('ItineraryPlans').doc(id);
+      const itineraryPlanDoc = await itineraryPlanRef.get();
+
+      if (!itineraryPlanDoc.exists) {
+          return res.status(404).send('Itinerary not found');
+      }
+
+      const currentItinerary = itineraryPlanDoc.data();
+      if (currentItinerary.userId !== req.user.uid) {
+          return res.status(403).send('Forbidden');
+      }
+
+      await itineraryPlanRef.update({ selectedHotel: {} });
+      res.status(200).send('Hotel deleted successfully');
+  } catch (error) {
+      console.error('Error deleting hotel:', error.message);
+      res.status(500).send('Internal Server Error');
+  }
 });
 
 module.exports = router;
